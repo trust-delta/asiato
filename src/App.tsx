@@ -55,7 +55,7 @@ function App() {
 
   return (
     <main className="container">
-      <h1>📁 ファイルの足跡</h1>
+      <h1>📁 Asiato</h1>
 
       <section>
         <button onClick={selectFolder}>フォルダを選択</button>

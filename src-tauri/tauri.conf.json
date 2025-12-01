@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "file-footprint",
+  "productName": "Asiato",
   "version": "0.1.0",
-  "identifier": "com.trustdelta.file-footprint",
+  "identifier": "com.trustdelta.asiato",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "file-footprint",
+        "title": "Asiato",
         "width": 800,
         "height": 600
       }
