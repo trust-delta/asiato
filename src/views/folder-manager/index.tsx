@@ -1,25 +1,12 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import "./App.css";
+import { HistoryEntry } from "../../logic/entity/version";
+import { initRepository } from "../../logic/action/init";
+import { getHistory } from "../../logic/action/log";
+import { saveVersion } from "../../logic/action/save";
+import { restoreVersion } from "../../logic/action/restore";
 
-// 履歴エントリの型
-interface HistoryEntry {
-  hash: string;
-  datetime: string;
-  message: string;
-}
-
-// 履歴文字列をパース（形式: "hash|datetime|message"）
-const parseHistoryEntry = (line: string): HistoryEntry | null => {
-  const parts = line.split("|");
-  if (parts.length < 3) return null;
-  return {
-    hash: parts[0],
-    datetime: parts[1],
-    message: parts.slice(2).join("|"), // メッセージに"|"が含まれる場合に対応
-  };
-};
+import "./styles.css";
 
 function App() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -38,13 +25,8 @@ function App() {
       setSelectedPath(path as string);
       setStatus("フォルダを選択しました");
       try {
-        const log = await invoke<string>("git_log", { path });
-        const entries = log
-          .split("\n")
-          .filter(Boolean)
-          .map(parseHistoryEntry)
-          .filter((e): e is HistoryEntry => e !== null);
-        setHistory(entries);
+        const log = await getHistory(path);
+        setHistory(log);
       } catch {
         setHistory([]);
       }
@@ -55,7 +37,7 @@ function App() {
   const initRepo = async () => {
     if (!selectedPath) return;
     try {
-      await invoke("git_init", { path: selectedPath });
+      await initRepository(selectedPath)
       setStatus("✓ バージョン管理を開始しました");
     } catch (e) {
       setStatus(`エラー: ${e}`);
@@ -66,16 +48,10 @@ function App() {
   const save = async () => {
     if (!selectedPath) return;
     try {
-      await invoke("git_add", { path: selectedPath });
-      await invoke("git_commit", { path: selectedPath, message: commitMessage });
+      await saveVersion(selectedPath, commitMessage);
       setStatus(`✓ セーブしました: ${commitMessage}`);
-      const log = await invoke<string>("git_log", { path: selectedPath });
-      const entries = log
-        .split("\n")
-        .filter(Boolean)
-        .map(parseHistoryEntry)
-        .filter((e): e is HistoryEntry => e !== null);
-      setHistory(entries);
+      const log = await getHistory(selectedPath);
+      setHistory(log);
     } catch (e) {
       setStatus(`エラー: ${e}`);
     }
@@ -93,23 +69,10 @@ function App() {
 
     try {
       // 指定コミットの状態にファイルを復元
-      await invoke("git_restore", { path: selectedPath, commitHash: entry.hash });
-
-      // 復元したことを記録するためにコミット
-      await invoke("git_add", { path: selectedPath });
-      await invoke("git_commit", {
-        path: selectedPath,
-        message: `「${entry.message}」の時点に戻しました`,
-      });
-
+      await restoreVersion(selectedPath, entry);
       setStatus(`✓ 「${entry.message}」の時点に戻しました`);
-      const log = await invoke<string>("git_log", { path: selectedPath });
-      const entries = log
-        .split("\n")
-        .filter(Boolean)
-        .map(parseHistoryEntry)
-        .filter((e): e is HistoryEntry => e !== null);
-      setHistory(entries);
+      const log = await getHistory(selectedPath);
+      setHistory(log);
     } catch (e) {
       setStatus(`エラー: ${e}`);
     }
